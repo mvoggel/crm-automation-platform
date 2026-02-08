@@ -137,3 +137,34 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Open .gitignore and ADD these lines at the bottom:
+
+# Environment variables (CRITICAL - never commit!)
+.env
+.env.*
+!.env.example
+
+# Client secrets (CRITICAL!)
+clients/*/config.json
+clients/*/.env*
+!clients/_template/
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Coverage
+coverage/
