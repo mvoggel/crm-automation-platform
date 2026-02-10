@@ -56,4 +56,7 @@ class InMemoryCache {
 export const cache = new InMemoryCache();
 
 // Run cleanup every 5 minutes
-setInterval(() => cache.cleanup(), 5 * 60 * 1000);
+// Run cleanup every 5 minutes (only in non-test environments)
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => cache.cleanup(), 5 * 60 * 1000);
+}
