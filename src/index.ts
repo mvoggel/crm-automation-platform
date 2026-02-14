@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { skipAuthForPublicRoutes } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
-import syncRoutes from './routes/sync';
+import syncRoutes from './routes/sync';  // ← Make sure this import is here
 
 dotenv.config();
 
@@ -26,8 +26,8 @@ app.get('/health', (req: Request, res: Response) => {
 // Apply auth to all /api routes
 app.use(skipAuthForPublicRoutes);
 
-// API routes
-app.use('/api', syncRoutes);
+// API routes - THIS LINE IS CRITICAL
+app.use('/api', syncRoutes);  // ← Make sure this line exists
 
 // Error handlers
 app.use(notFoundHandler);

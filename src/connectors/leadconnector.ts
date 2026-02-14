@@ -123,7 +123,10 @@ export class LeadConnectorCRM extends CRMConnector {
     }
   }
 
-  /**
+    /**
+     * Fetch contact by ID
+     */
+    /**
    * Fetch contact by ID
    */
   async fetchContact(contactId: string): Promise<Contact> {
@@ -131,30 +134,23 @@ export class LeadConnectorCRM extends CRMConnector {
 
     try {
       const response = await this.client.get(path);
-      return response.data?.contact || response.data;
+      const rawContact = response.data?.contact || response.data;
+      
+      // Extract owner info from the contact
+      const owner = this.extractOwner(rawContact);
+      
+      return {
+        id: rawContact.id || '',
+        name: rawContact.name || rawContact.firstName + ' ' + rawContact.lastName || '',
+        email: rawContact.email || '',
+        phoneNo: rawContact.phone || rawContact.phoneNo || '',
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        address: rawContact.address,
+      };
     } catch (error: any) {
       throw new Error(`LeadConnector contact fetch error: ${error.message}`);
     }
-  }
-
-  /**
-   * Extract owner info from contact payload (with caching)
-   */
-  async getOwnerByContactId(contactId: string): Promise<Owner> {
-    const cacheKey = `lc:owner:${contactId}`;
-    const cached = cache.get(cacheKey);
-
-    if (cached) {
-      return cached as Owner;
-    }
-
-    const contact = await this.fetchContact(contactId);
-    const owner = this.extractOwner(contact);
-
-    // Cache for 6 hours (21600 seconds)
-    cache.set(cacheKey, owner, 21600);
-
-    return owner;
   }
 
   /**
@@ -178,6 +174,27 @@ export class LeadConnectorCRM extends CRMConnector {
 
     return { ownerId, ownerName };
   }
+
+  /**
+   * Extract owner info from contact payload (with caching)
+   */
+  async getOwnerByContactId(contactId: string): Promise<Owner> {
+    const cacheKey = `lc:owner:${contactId}`;
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      return cached as Owner;
+    }
+
+    const contact = await this.fetchContact(contactId);
+    const owner = this.extractOwner(contact);
+
+    // Cache for 6 hours (21600 seconds)
+    cache.set(cacheKey, owner, 21600);
+
+    return owner;
+  }
+
 
   /**
    * Normalize LeadConnector appointment to standard format

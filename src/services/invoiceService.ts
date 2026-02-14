@@ -43,6 +43,8 @@ export class InvoiceService {
       if (cid) contactIds.add(cid);
     });
 
+    console.log(`Building owner lookup for ${contactIds.size} unique contacts...`);
+
     // Fetch owner info for each contact (with rate limiting)
     let count = 0;
     for (const contactId of contactIds) {
@@ -53,6 +55,12 @@ export class InvoiceService {
         }
 
         const contact = await this.crm.fetchContact(contactId);
+        
+        // DEBUG: Log first contact to see what we get
+        if (count === 0) {
+          console.log('Sample contact data:', JSON.stringify(contact, null, 2));
+        }
+        
         ownerMap.set(contactId, {
           ownerId: contact.ownerId || '',
           ownerName: contact.ownerName || '',
@@ -65,6 +73,8 @@ export class InvoiceService {
         ownerMap.set(contactId, { ownerId: '', ownerName: '' });
       }
     }
+
+    console.log(`Owner lookup complete. Found owners for ${Array.from(ownerMap.values()).filter(o => o.ownerId).length} contacts`);
 
     return ownerMap;
   }
