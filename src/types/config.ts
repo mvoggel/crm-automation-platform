@@ -1,5 +1,7 @@
+export type CRMType = 'leadconnector' | 'servicetitan' | 'jobber' | 'spreadsheet' | 'hubspot';
+
 export interface CRMConfig {
-  type: 'leadconnector' | 'servicetitan' | 'jobber' | 'spreadsheet';
+  type: CRMType;
   apiToken?: string;
   locationId?: string;
   apiVersion?: string;

@@ -1,6 +1,8 @@
 import { CRMConnector } from './base';
 import { LeadConnectorCRM } from './leadconnector';
 import { CRMConfig } from '../types/config';
+import { HubSpotCRM } from './hubspot';
+
 
 /**
  * Factory to create appropriate CRM connector based on config
@@ -16,6 +18,14 @@ export function createCRMConnector(config: CRMConfig): CRMConnector {
         apiToken: config.apiToken,
         locationId: config.locationId,
         apiVersion: config.apiVersion,
+      });
+
+    case 'hubspot':
+      if (!config.apiToken) {  // ← Add validation
+        throw new Error('HubSpot requires apiToken');
+      }
+      return new HubSpotCRM({
+        apiToken: config.apiToken,  // ← Now TypeScript knows it's not undefined
       });
 
     case 'spreadsheet':

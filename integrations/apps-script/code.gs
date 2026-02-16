@@ -122,6 +122,9 @@ function run_invoice_update() {
 /**
  * Update appointments year-to-date
  */
+/**
+ * Sync appointments year-to-date
+ */
 function run_appts_update() {
   try {
     Logger.log('Starting appointments update (YTD)...');
@@ -134,11 +137,48 @@ function run_appts_update() {
       throw new Error(data.message || 'API returned error');
     }
 
-    const note = `Updated: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} | Count: ${data.count}`;
+    const note = `Updated: ${new Date().toLocaleString()} | Count: ${data.count}`;
     
     writeToSheet_('Raw_Appts_YTD', data.headers, data.rows, note);
     
     Logger.log(`✅ Success: ${data.count} appointments updated`);
+    return { success: true, count: data.count };
+    
+  } catch (error) {
+    Logger.log(`❌ Error: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Test with smaller dataset (last 30 days)
+ */
+function testApptsSync() {
+  try {
+    Logger.log('Testing with last 30 days of appointments...');
+    
+    // For appointments, we don't have last7days/last30days actions yet
+    // So we'll use 'ytd' but you could add those actions if needed
+    const data = callAPI_('/api/sync-appointments', {
+      action: 'ytd'
+    });
+
+    if (!data.ok) {
+      throw new Error(data.message || 'API returned error');
+    }
+
+    Logger.log('Data count: ' + data.count);
+    
+    if (data.count === 0) {
+      Logger.log('No appointments returned');
+      return { success: true, count: 0 };
+    }
+
+    const note = `TEST - YTD Appointments - Updated: ${new Date().toLocaleString()} | Count: ${data.count}`;
+    
+    writeToSheet_('Test_Appts', data.headers, data.rows, note);
+    
+    Logger.log(`✅ Success: ${data.count} appointments written to Test_Appts sheet`);
     return { success: true, count: data.count };
     
   } catch (error) {
