@@ -39,7 +39,6 @@ export interface Appointment {
   startTime: string | number; // Can be ISO string or milliseconds
   status: string;
   contactId: string;
-  contactName: string;
   userId: string;
 }
 
@@ -84,7 +83,6 @@ export interface AppointmentRow {
   appt_date: string;
   status: string;
   contact_id: string;
-  contact_name: string;
 }
 
 export interface Transaction {

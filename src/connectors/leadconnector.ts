@@ -84,25 +84,8 @@ export class LeadConnectorCRM extends CRMConnector {
       const path = `/calendars/events?locationId=${encodeURIComponent(this.locationId)}&userId=${encodeURIComponent(userId)}&startTime=${encodeURIComponent(String(startMs))}&endTime=${encodeURIComponent(String(endMs))}`;
       const response = await this.client.get(path);
       const events = response.data?.events || response.data?.data || [];
-      if (events.length > 0) {
-        console.log('[DEBUG appt] first event keys:', Object.keys(events[0]));
-        console.log('[DEBUG appt] first event:', JSON.stringify(events[0]).substring(0, 600));
-      }
       all.push(...events.map((evt: any) => this.normalizeAppointment(evt, userId)));
       await this.sleep(150);
-    }
-
-    // GHL calendar events often omit contactName — backfill via contact lookup when missing.
-    // fetchContact has a 6-hour cache, so repeated contacts don't cause extra API calls.
-    for (const apt of all) {
-      if (!apt.contactName && apt.contactId) {
-        try {
-          const contact = await this.fetchContact(apt.contactId);
-          apt.contactName = contact.name;
-        } catch {
-          // leave contactName empty if lookup fails
-        }
-      }
     }
 
     return all;
@@ -155,7 +138,6 @@ export class LeadConnectorCRM extends CRMConnector {
       startTime: evt?.startTime || evt?.start || evt?.start_time || '',
       status: evt?.status || evt?.appointmentStatus || '',
       contactId: evt?.contactId || evt?.contact_id || evt?.contact?.id || '',
-      contactName: evt?.contactName || evt?.contact_name || evt?.contact?.name || '',
     };
   }
 

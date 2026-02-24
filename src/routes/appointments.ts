@@ -6,7 +6,7 @@ import { createCRMConnector, hasCRM } from '../connectors/factory';
 
 const router = Router();
 
-const APPT_HEADERS = ['user_id', 'event_id', 'event_title', 'appt_date', 'status', 'contact_id', 'contact_name'];
+const APPT_HEADERS = ['user_id', 'event_id', 'event_title', 'appt_date', 'status', 'contact_id'];
 
 router.post('/sync-appointments', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -35,7 +35,6 @@ router.post('/sync-appointments', async (req: AuthenticatedRequest, res: Respons
       new Date(apt.startTime).toLocaleDateString('en-US', { timeZone: clientConfig.timezone }),
       apt.status,
       apt.contactId,
-      apt.contactName,
     ]);
 
     res.json({ ok: true, action, clientId: req.clientId, headers: APPT_HEADERS, rows, count: rows.length });
