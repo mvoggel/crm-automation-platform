@@ -154,31 +154,6 @@ export class InvoiceService {
     ];
   }
 
-  /**
-   * Complete workflow: fetch invoices, enrich with owners, transform to rows
-   */
-  async fetchAndTransformInvoices(
-    year: number,
-    month?: number,
-    timezone: string = 'America/New_York'
-  ): Promise<{ headers: string[], rows: InvoiceRow[] }> {
-    // Fetch invoices
-    const invoices = month
-      ? await this.fetchInvoicesForMonth(year, month)
-      : await this.fetchInvoicesForYear(year);
-
-    // Enrich with owner data
-    const ownerMap = await this.buildOwnerLookup(invoices);
-
-    // Transform to rows
-    const rows = this.transformToRows(invoices, ownerMap, timezone);
-
-    return {
-      headers: this.getHeaders(),
-      rows,
-    };
-  }
-
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

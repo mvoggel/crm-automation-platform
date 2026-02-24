@@ -88,3 +88,31 @@ export interface AppointmentRow {
   contact_id: string;
   contact_name: string;
 }
+
+export interface Transaction {
+  id: string;
+  entityId: string;
+  entitySource?: { id?: string };
+  status: string;
+  fulfilledAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  chargeSnapshot?: any;
+}
+
+export interface PaymentTypeRow {
+  invoice_id: string;
+  invoice_number: string;
+  invoice_display: string;
+  invoice_status: string;
+  amount_paid: number;
+  amount_due: number;
+  amount_total: number;
+  issue_date: string;
+  due_date: string;
+  latest_payment_type: string;
+  latest_payment_detail: string;
+  latest_payment_date: string;
+  all_payment_types: string;
+  all_payment_details: string;
+}

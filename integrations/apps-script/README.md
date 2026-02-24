@@ -21,7 +21,7 @@
 3. Click **Add script property**
 4. Add:
    - **Property:** `API_SECRET`
-   - **Value:** (copy from `clients/south-jersey-blinds/config.json` → `apiSecret` field)
+   - **Value:** (copy from `clients/CLIENT_NAME/config.json` → `apiSecret` field)
 5. Click **Save**
 
 ### 4. Update API_BASE_URL (After Deployment)

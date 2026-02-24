@@ -1,4 +1,4 @@
-import { Invoice, Appointment, Contact } from '../types/crm';
+import { Invoice, Appointment, Contact, Transaction } from '../types/crm';
 
 /**
  * Base class that all CRM connectors must extend
@@ -29,6 +29,13 @@ export abstract class CRMConnector {
    * Fetch contact details by ID
    */
   abstract fetchContact(contactId: string): Promise<Contact>;
+
+  /**
+   * Fetch transactions within date range. Returns [] by default (not all CRMs support this).
+   */
+  async fetchTransactions(_startDate: Date, _endDate: Date): Promise<Transaction[]> {
+    return [];
+  }
 
   /**
    * Verify CRM credentials work

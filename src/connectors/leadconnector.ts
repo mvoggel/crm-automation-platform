@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { CRMConnector } from './base';
-import { Invoice, Appointment, Contact, Owner } from '../types/crm';
+import { Invoice, Appointment, Contact, Owner, Transaction } from '../types/crm';
 import { cache } from '../utils/cache';
 
 export interface LeadConnectorConfig {
@@ -17,7 +17,6 @@ export class LeadConnectorCRM extends CRMConnector {
 
   constructor(config: LeadConnectorConfig) {
     super(config);
-
     this.locationId = config.locationId;
     this.API_VERSION = config.apiVersion || '2021-07-28';
 
@@ -33,172 +32,81 @@ export class LeadConnectorCRM extends CRMConnector {
     });
   }
 
-  /**
-   * Fetch all invoices with pagination, then filter by date
-   */
   async fetchInvoices(startDate: Date, endDate: Date): Promise<Invoice[]> {
-    const allInvoices = await this.fetchAllInvoicesPaged();
-
+    const all = await this.paginatedGet<Invoice>('/invoices/', { altType: 'location', altId: this.locationId }, 'invoices');
     const startMs = startDate.getTime();
     const endMs = endDate.getTime();
-
-    return allInvoices.filter(inv => {
-      const issueTime = inv.issueDate ? new Date(inv.issueDate).getTime() : null;
-      return issueTime !== null && issueTime >= startMs && issueTime < endMs;
+    return all.filter(inv => {
+      const t = inv.issueDate ? new Date(inv.issueDate).getTime() : null;
+      return t !== null && t >= startMs && t < endMs;
     });
   }
 
-  /**
-   * Paginated fetch of all invoices (LeadConnector supports limit/offset)
-   */
-  private async fetchAllInvoicesPaged(): Promise<Invoice[]> {
-    const limit = 100;
-    let offset = 0;
-    const all: Invoice[] = [];
+  async fetchTransactions(startDate: Date, endDate: Date): Promise<Transaction[]> {
+    const all = await this.paginatedGet<any>('/payments/transactions', { altType: 'location', altId: this.locationId }, 'transactions', 150);
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    return all.filter(txn => {
+      const ms = txnTimeMs(txn);
+      return ms !== null && ms >= startMs && ms < endMs;
+    });
+  }
 
-    while (true) {
-      const path = `/invoices/?altType=location&altId=${encodeURIComponent(this.locationId)}&limit=${limit}&offset=${offset}`;
+  async fetchAppointments(userIds: string[], startDate: Date, endDate: Date): Promise<Appointment[]> {
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    const all: Appointment[] = [];
 
-      try {
-        const response = await this.client.get(path);
-        const invoices = response.data?.invoices || [];
-
-        all.push(...invoices);
-
-        if (invoices.length < limit) break;
-        offset += limit;
-
-        // Rate limiting pause
-        await this.sleep(250);
-      } catch (error: any) {
-        throw new Error(`LeadConnector API error: ${error.message}`);
-      }
+    for (const userId of userIds) {
+      const path = `/calendars/events?locationId=${encodeURIComponent(this.locationId)}&userId=${encodeURIComponent(userId)}&startTime=${encodeURIComponent(String(startMs))}&endTime=${encodeURIComponent(String(endMs))}`;
+      const response = await this.client.get(path);
+      const events = response.data?.events || response.data?.data || [];
+      all.push(...events.map((evt: any) => this.normalizeAppointment(evt, userId)));
+      await this.sleep(150);
     }
 
     return all;
   }
 
-  /**
-   * Fetch appointments (calendar events) for multiple users
-   */
-  async fetchAppointments(
-    userIds: string[],
-    startDate: Date,
-    endDate: Date
-  ): Promise<Appointment[]> {
-    const startMs = startDate.getTime();
-    const endMs = endDate.getTime();
-
-    const allAppointments: Appointment[] = [];
-
-    for (const userId of userIds) {
-      const events = await this.fetchCalendarEventsForUser(userId, startMs, endMs);
-      allAppointments.push(...events);
-
-      // Small pause between users
-      await this.sleep(150);
-    }
-
-    return allAppointments;
-  }
-
-  /**
-   * Fetch calendar events for a single user
-   * Note: LeadConnector API may not support limit/offset for this endpoint
-   */
-  private async fetchCalendarEventsForUser(
-    userId: string,
-    startMs: number,
-    endMs: number
-  ): Promise<Appointment[]> {
-    const path = `/calendars/events?locationId=${encodeURIComponent(this.locationId)}&userId=${encodeURIComponent(userId)}&startTime=${encodeURIComponent(String(startMs))}&endTime=${encodeURIComponent(String(endMs))}`;
-
-    try {
-      const response = await this.client.get(path);
-      const events = response.data?.events || response.data?.data || [];
-
-      return events.map((evt: any) => this.normalizeAppointment(evt, userId));
-    } catch (error: any) {
-      throw new Error(`LeadConnector calendar API error: ${error.message}`);
-    }
-  }
-
-    /**
-     * Fetch contact by ID
-     */
-    /**
-   * Fetch contact by ID
-   */
   async fetchContact(contactId: string): Promise<Contact> {
-    const path = `/contacts/${encodeURIComponent(contactId)}`;
-
-    try {
-      const response = await this.client.get(path);
-      const rawContact = response.data?.contact || response.data;
-      
-      // Extract owner info from the contact
-      const owner = this.extractOwner(rawContact);
-      
-      return {
-        id: rawContact.id || '',
-        name: rawContact.name || rawContact.firstName + ' ' + rawContact.lastName || '',
-        email: rawContact.email || '',
-        phoneNo: rawContact.phone || rawContact.phoneNo || '',
-        ownerId: owner.ownerId,
-        ownerName: owner.ownerName,
-        address: rawContact.address,
-      };
-    } catch (error: any) {
-      throw new Error(`LeadConnector contact fetch error: ${error.message}`);
-    }
-  }
-
-  /**
-   * Extract owner from contact data (handles various field names)
-   */
-  private extractOwner(contactPayload: any): Owner {
-    const c = contactPayload?.contact || contactPayload;
-
-    const ownerId =
-      c?.ownerId ||
-      c?.owner?.id ||
-      c?.assignedTo ||
-      c?.assignedToId ||
-      '';
-
-    const ownerName =
-      c?.ownerName ||
-      c?.owner?.name ||
-      c?.assignedToName ||
-      '';
-
-    return { ownerId, ownerName };
-  }
-
-  /**
-   * Extract owner info from contact payload (with caching)
-   */
-  async getOwnerByContactId(contactId: string): Promise<Owner> {
-    const cacheKey = `lc:owner:${contactId}`;
+    const cacheKey = `lc:contact:${contactId}`;
     const cached = cache.get(cacheKey);
+    if (cached) return cached as Contact;
 
-    if (cached) {
-      return cached as Owner;
-    }
+    const response = await this.client.get(`/contacts/${encodeURIComponent(contactId)}`);
+    const raw = response.data?.contact || response.data;
+    const owner = this.extractOwner(raw);
 
-    const contact = await this.fetchContact(contactId);
-    const owner = this.extractOwner(contact);
+    const contact: Contact = {
+      id: raw.id || '',
+      name: raw.name || `${raw.firstName || ''} ${raw.lastName || ''}`.trim(),
+      email: raw.email || '',
+      phoneNo: raw.phone || raw.phoneNo || '',
+      ownerId: owner.ownerId,
+      ownerName: owner.ownerName,
+      address: raw.address,
+    };
 
-    // Cache for 6 hours (21600 seconds)
-    cache.set(cacheKey, owner, 21600);
-
-    return owner;
+    cache.set(cacheKey, contact, 21600);
+    return contact;
   }
 
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await this.client.get(`/locations/${this.locationId}`);
+      return response.status === 200;
+    } catch {
+      return false;
+    }
+  }
 
-  /**
-   * Normalize LeadConnector appointment to standard format
-   */
+  private extractOwner(c: any): Owner {
+    return {
+      ownerId: c?.ownerId || c?.owner?.id || c?.assignedTo || c?.assignedToId || '',
+      ownerName: c?.ownerName || c?.owner?.name || c?.assignedToName || '',
+    };
+  }
+
   private normalizeAppointment(evt: any, userId: string): Appointment {
     return {
       id: evt?.id || evt?._id || '',
@@ -211,19 +119,38 @@ export class LeadConnectorCRM extends CRMConnector {
     };
   }
 
-  /**
-   * Health check - verify credentials
-   */
-  async healthCheck(): Promise<boolean> {
-    try {
-      const response = await this.client.get(`/locations/${this.locationId}`);
-      return response.status === 200;
-    } catch (error) {
-      return false;
+  private async paginatedGet<T>(
+    path: string,
+    params: Record<string, string>,
+    dataKey: string,
+    sleepMs = 250
+  ): Promise<T[]> {
+    const limit = 100;
+    let offset = 0;
+    const all: T[] = [];
+    const qs = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    const separator = path.includes('?') ? '&' : '?';
+
+    while (true) {
+      const response = await this.client.get(`${path}${separator}${qs}&limit=${limit}&offset=${offset}`);
+      const items: T[] = response.data?.[dataKey] || response.data?.data || response.data?.items || [];
+      all.push(...items);
+      if (items.length < limit) break;
+      offset += limit;
+      await this.sleep(sleepMs);
     }
+
+    return all;
   }
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+}
+
+function txnTimeMs(txn: any): number | null {
+  const v = txn?.fulfilledAt || txn?.createdAt || txn?.updatedAt || '';
+  if (!v) return null;
+  const ms = new Date(v).getTime();
+  return isNaN(ms) ? null : ms;
 }

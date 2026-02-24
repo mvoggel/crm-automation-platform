@@ -32,6 +32,26 @@ export class ClientConfigLoader {
       return this.configCache.get(sanitizedId)!;
     }
 
+    // Check environment variable first (required for Vercel / serverless deployments
+    // where the clients/ directory is not included in the build).
+    // Env var format: CLIENT_CONFIG_SOUTH_JERSEY_BLINDS (hyphens → underscores, uppercase)
+    const envKey = `CLIENT_CONFIG_${sanitizedId.toUpperCase().replace(/-/g, '_')}`;
+    const envJson = process.env[envKey];
+    if (envJson) {
+      try {
+        const config = JSON.parse(envJson) as ClientConfig;
+        const validationError = this.validateConfig(config);
+        if (validationError) {
+          console.error(`Invalid env config for ${sanitizedId}: ${validationError}`);
+          return null;
+        }
+        this.configCache.set(sanitizedId, config);
+        return config;
+      } catch (e) {
+        console.error(`Failed to parse env config for ${sanitizedId}:`, e);
+      }
+    }
+
     // Load from file
     const configPath = path.join(this.clientsDir, sanitizedId, 'config.json');
 

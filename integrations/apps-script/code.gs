@@ -1,292 +1,120 @@
 /**
- * South Jersey Blinds - Apps Script Client
- * Thin client that calls the centralized API for all business logic
+ * South Jersey Blinds — Apps Script thin client
+ * All business logic lives in the API. This file only calls the API and writes to sheets.
+ *
+ * Setup:
+ *   Extensions > Apps Script > Project Settings > Script Properties
+ *   Add key: API_SECRET  (value from clients/south-jersey-blinds/config.json → apiSecret)
  */
 
-// Configuration
-const API_BASE_URL = 'http://localhost:3000'; // Change to production URL after deployment
+const API_BASE_URL = 'https://your-api-url.vercel.app'; // Replace with deployed URL
 const CLIENT_ID = 'south-jersey-blinds';
 const SPREADSHEET_ID = '1XD_-IXLyH8ydIfDSYn2IJChsrA0ymmF7yFnPh4DJp4c';
 
-/**
- * Get API secret from Script Properties
- * Set this in: Extensions > Apps Script > Project Settings > Script Properties
- * Key: API_SECRET
- * Value: (the apiSecret from clients/south-jersey-blinds/config.json)
- */
+// ---------------------------
+// Core helpers
+// ---------------------------
+
 function getApiSecret_() {
   const secret = PropertiesService.getScriptProperties().getProperty('API_SECRET');
-  if (!secret) {
-    throw new Error('Missing API_SECRET in Script Properties. Please configure it.');
-  }
+  if (!secret) throw new Error('Missing API_SECRET in Script Properties');
   return secret.trim();
 }
 
-/**
- * Call the API with authentication
- */
 function callAPI_(endpoint, payload) {
-  const url = API_BASE_URL + endpoint;
-  const secret = getApiSecret_();
-
-  // Add clientId to payload
   payload.clientId = CLIENT_ID;
-
-  const options = {
+  const response = UrlFetchApp.fetch(API_BASE_URL + endpoint, {
     method: 'post',
-    headers: {
-      'Authorization': `Bearer ${secret}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Authorization': `Bearer ${getApiSecret_()}`, 'Content-Type': 'application/json' },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true,
-  };
-
-  const response = UrlFetchApp.fetch(url, options);
+  });
   const code = response.getResponseCode();
-  const bodyText = response.getContentText();
-
-  if (code < 200 || code >= 300) {
-    throw new Error(`API error ${code}: ${bodyText}`);
-  }
-
-  return JSON.parse(bodyText);
+  const body = response.getContentText();
+  if (code < 200 || code >= 300) throw new Error(`API error ${code}: ${body}`);
+  return JSON.parse(body);
 }
 
-/**
- * Write data to a sheet
- */
 function writeToSheet_(sheetName, headers, rows, note) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName(sheetName);
-  
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-  }
-
-  // Add note to cell A1 if provided
-  if (note) {
-    sheet.getRange('A1').setNote(note);
-  }
-
-  // Clear existing data (keep formulas in other columns)
+  let sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+  if (note) sheet.getRange('A1').setNote(note);
   const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
-  }
-
-  // Write headers
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   sheet.setFrozenRows(1);
-
-  // Write data rows
-  if (rows && rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  }
-
+  if (rows && rows.length > 0) sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
   Logger.log(`Wrote ${rows.length} rows to ${sheetName}`);
 }
 
-// ========================================
-// Main Functions (called by ChatGPT or manually)
-// ========================================
+function syncAndWrite_(endpoint, sheetName, actionPayload) {
+  const data = callAPI_(endpoint, actionPayload);
+  if (!data.ok) throw new Error(data.message || 'API returned error');
+  const note = `Updated: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} | Count: ${data.count}`;
+  writeToSheet_(sheetName, data.headers, data.rows, note);
+  Logger.log(`✅ ${sheetName}: ${data.count} rows`);
+  return { success: true, count: data.count };
+}
 
-/**
- * Update year-to-date invoices
- */
+// ---------------------------
+// Public sync functions
+// ---------------------------
+
 function run_invoice_update() {
-  try {
-    Logger.log('Starting invoice update (YTD)...');
-    
-    const data = callAPI_('/api/sync-invoices', {
-      action: 'ytd'
-    });
-
-    if (!data.ok) {
-      throw new Error(data.message || 'API returned error');
-    }
-
-    const note = `Updated: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} | Count: ${data.count}`;
-    
-    writeToSheet_('Raw_YTD', data.headers, data.rows, note);
-    
-    Logger.log(`✅ Success: ${data.count} invoices updated`);
-    return { success: true, count: data.count };
-    
-  } catch (error) {
-    Logger.log(`❌ Error: ${error.message}`);
-    throw error;
-  }
+  return syncAndWrite_('/api/sync-invoices', 'Raw_YTD', { action: 'ytd' });
 }
 
-/**
- * Update appointments year-to-date
- */
-/**
- * Sync appointments year-to-date
- */
 function run_appts_update() {
-  try {
-    Logger.log('Starting appointments update (YTD)...');
-    
-    const data = callAPI_('/api/sync-appointments', {
-      action: 'ytd'
-    });
-
-    if (!data.ok) {
-      throw new Error(data.message || 'API returned error');
-    }
-
-    const note = `Updated: ${new Date().toLocaleString()} | Count: ${data.count}`;
-    
-    writeToSheet_('Raw_Appts_YTD', data.headers, data.rows, note);
-    
-    Logger.log(`✅ Success: ${data.count} appointments updated`);
-    return { success: true, count: data.count };
-    
-  } catch (error) {
-    Logger.log(`❌ Error: ${error.message}`);
-    throw error;
-  }
+  return syncAndWrite_('/api/sync-appointments', 'Raw_Appts_YTD', { action: 'ytd' });
 }
 
-/**
- * Test with smaller dataset (last 30 days)
- */
-function testApptsSync() {
-  try {
-    Logger.log('Testing with last 30 days of appointments...');
-    
-    // For appointments, we don't have last7days/last30days actions yet
-    // So we'll use 'ytd' but you could add those actions if needed
-    const data = callAPI_('/api/sync-appointments', {
-      action: 'ytd'
-    });
-
-    if (!data.ok) {
-      throw new Error(data.message || 'API returned error');
-    }
-
-    Logger.log('Data count: ' + data.count);
-    
-    if (data.count === 0) {
-      Logger.log('No appointments returned');
-      return { success: true, count: 0 };
-    }
-
-    const note = `TEST - YTD Appointments - Updated: ${new Date().toLocaleString()} | Count: ${data.count}`;
-    
-    writeToSheet_('Test_Appts', data.headers, data.rows, note);
-    
-    Logger.log(`✅ Success: ${data.count} appointments written to Test_Appts sheet`);
-    return { success: true, count: data.count };
-    
-  } catch (error) {
-    Logger.log(`❌ Error: ${error.message}`);
-    throw error;
-  }
+function run_payment_type_update() {
+  return syncAndWrite_('/api/sync-payment-types', 'payment_type', { action: 'ytd' });
 }
 
-/**
- * Check API connection and client status
- */
 function testConnection() {
-  try {
-    Logger.log('Testing API connection...');
-    
-    const data = callAPI_('/api/client-status', {});
-    
-    Logger.log('✅ Connection successful!');
-    Logger.log(`Client: ${data.clientName}`);
-    Logger.log(`CRM Type: ${data.crmType}`);
-    Logger.log(`Has CRM: ${data.hasCRM}`);
-    Logger.log(`Features: ${JSON.stringify(data.features)}`);
-    
-    return data;
-    
-  } catch (error) {
-    Logger.log(`❌ Connection failed: ${error.message}`);
-    throw error;
-  }
+  const data = callAPI_('/api/client-status', {});
+  Logger.log(`Client: ${data.clientName} | CRM: ${data.crmType} | Connected: ${data.ok}`);
+  return data;
 }
 
-// ========================================
-// Web App Endpoints (for ChatGPT integration)
-// ========================================
+// ---------------------------
+// Web app (ChatGPT / external triggers)
+// ---------------------------
 
-/**
- * Handle POST requests from ChatGPT
- */
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents || '{}');
-    const action = payload.action;
-
-    // Verify secret from ChatGPT matches our expected secret
-    const expectedSecret = getApiSecret_();
-    const providedSecret = payload.secret || e.parameter?.secret;
-
-    if (providedSecret !== expectedSecret) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: false, error: 'unauthorized' }))
-        .setMimeType(ContentService.MimeType.JSON);
+    const provided = payload.secret || e.parameter?.secret || '';
+    if (provided !== getApiSecret_()) {
+      return json_({ ok: false, error: 'unauthorized' });
     }
 
-    let result;
+    const action = String(payload.action || e.parameter?.action || '').trim();
+    const handlers = {
+      run_invoice_update,
+      run_appts_update,
+      run_payment_type_update,
+      test_connection: testConnection,
+    };
 
-    switch (action) {
-      case 'run_invoice_update':
-        result = run_invoice_update();
-        break;
-      
-      case 'run_appts_update':
-        result = run_appts_update();
-        break;
-      
-      case 'test_connection':
-        result = testConnection();
-        break;
-      
-      default:
-        throw new Error(`Unknown action: ${action}`);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true, action, result }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: error.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    if (!handlers[action]) return json_({ ok: false, error: `unknown_action: ${action}` });
+    const result = handlers[action]();
+    return json_({ ok: true, action, result });
+  } catch (err) {
+    return json_({ ok: false, error: err.message });
   }
 }
 
-/**
- * Handle GET requests (for testing in browser)
- */
 function doGet(e) {
   const params = e?.parameter || {};
-  
-  // Simple test endpoint
-  if (params.test === '1') {
-    try {
-      const status = testConnection();
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: true, status }))
-        .setMimeType(ContentService.MimeType.JSON);
-    } catch (error) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: false, error: error.message }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-
-  // Otherwise, treat as action request
   const fakeEvent = {
-    postData: { contents: JSON.stringify({ action: params.action }) },
-    parameter: params
+    postData: { contents: JSON.stringify({ action: params.action, secret: params.secret }) },
+    parameter: params,
   };
-  
   return doPost(fakeEvent);
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }

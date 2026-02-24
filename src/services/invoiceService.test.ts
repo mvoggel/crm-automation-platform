@@ -231,52 +231,6 @@ describe('InvoiceService', () => {
     });
   });
 
-  describe('fetchAndTransformInvoices', () => {
-    it('performs complete workflow for monthly data', async () => {
-      const mockInvoices: Invoice[] = [
-        createMockInvoiceWithContact('inv-1', 'contact-1', '2024-03-15T10:00:00Z'),
-      ];
-
-      mockCRM.setMockInvoices(mockInvoices);
-      mockCRM.setMockContact('contact-1', {
-        id: 'contact-1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phoneNo: '555-0001',
-        ownerId: 'owner-1',
-        ownerName: 'Sales Rep',
-      });
-
-      const result = await service.fetchAndTransformInvoices(2024, 3);
-
-      expect(result.headers).toHaveLength(23);
-      expect(result.rows).toHaveLength(1);
-      expect(result.rows[0].invoice_id).toBe('inv-1');
-      expect(result.rows[0].owner_name).toBe('Sales Rep');
-    });
-
-    it('performs complete workflow for yearly data', async () => {
-      const mockInvoices: Invoice[] = [
-        createMockInvoiceWithContact('inv-1', 'contact-1', '2024-01-15T10:00:00Z'),
-        createMockInvoiceWithContact('inv-2', 'contact-1', '2024-06-15T10:00:00Z'),
-      ];
-
-      mockCRM.setMockInvoices(mockInvoices);
-      mockCRM.setMockContact('contact-1', {
-        id: 'contact-1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phoneNo: '555-0001',
-        ownerId: 'owner-1',
-        ownerName: 'Sales Rep',
-      });
-
-      const result = await service.fetchAndTransformInvoices(2024);
-
-      expect(result.headers).toHaveLength(23);
-      expect(result.rows).toHaveLength(2);
-    });
-  });
 });
 
 // Helper functions to create mock data
