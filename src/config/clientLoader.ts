@@ -2,10 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ClientConfig } from '../types/config';
 
-/**
- * Load client configuration from file system
- * Each client has their own config.json in clients/{clientId}/
- */
+/** Loads and caches per-client config from an env var (production/Vercel) or local filesystem (dev). */
 export class ClientConfigLoader {
   private configCache: Map<string, ClientConfig> = new Map();
   private readonly clientsDir: string;

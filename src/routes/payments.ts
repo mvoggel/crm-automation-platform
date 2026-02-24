@@ -1,3 +1,5 @@
+/** POST /api/sync-payment-types — joins YTD invoices with transaction data to produce payment method summaries. */
+
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { createCRMConnector, hasCRM } from '../connectors/factory';

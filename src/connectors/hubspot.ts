@@ -1,6 +1,8 @@
+/** HubSpot API client — stub implementation for contacts; starting point for a full HubSpot integration. */
+
 import axios, { AxiosInstance } from 'axios';
 import { CRMConnector } from './base';
-import { Invoice, Contact, Appointment, Owner } from '../types/crm';
+import { Invoice, Contact, Appointment } from '../types/crm';
 
 interface HubSpotConfig {
   apiToken: string;
@@ -122,9 +124,9 @@ export class HubSpotCRM extends CRMConnector {
    * HubSpot doesn't have appointments in free plan
    */
   async fetchAppointments(
-    userIds: string[],
-    startDate: Date,
-    endDate: Date
+    _userIds: string[],
+    _startDate: Date,
+    _endDate: Date
   ): Promise<Appointment[]> {
     // Return empty - would need Meetings API (paid feature)
     return [];

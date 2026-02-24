@@ -1,6 +1,4 @@
-/**
- * Standard invoice format - all CRMs must transform to this
- */
+/** CRM-agnostic data types — the standard shapes all connectors normalize their raw API data into. */
 export interface Invoice {
   id: string;
   invoiceNumber: string;

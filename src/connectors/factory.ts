@@ -1,3 +1,5 @@
+/** Creates the correct CRM connector instance based on a client's config type. */
+
 import { CRMConnector } from './base';
 import { LeadConnectorCRM } from './leadconnector';
 import { CRMConfig } from '../types/config';

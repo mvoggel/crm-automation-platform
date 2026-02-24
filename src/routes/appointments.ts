@@ -1,3 +1,5 @@
+/** POST /api/sync-appointments — fetches YTD calendar appointment data for the client's team. */
+
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { createCRMConnector, hasCRM } from '../connectors/factory';

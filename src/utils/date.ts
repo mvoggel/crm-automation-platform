@@ -1,7 +1,4 @@
-/**
- * Date utilities with timezone support
- * Extracted from SJ Blinds Apps Script
- */
+/** Timezone-aware date utilities — formats dates as MM/dd/yyyy and computes year/month time windows. */
 
 export const DEFAULT_TIMEZONE = 'America/New_York';
 

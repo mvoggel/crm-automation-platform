@@ -1,3 +1,5 @@
+/** POST /api/sync-invoices — fetches and transforms invoice data from the CRM for a given date range. */
+
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { createCRMConnector, hasCRM } from '../connectors/factory';

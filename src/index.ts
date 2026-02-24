@@ -1,3 +1,5 @@
+/** Express app entry point — wires middleware, mounts API routes, and starts the server. */
+
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { skipAuthForPublicRoutes } from './middleware/auth';

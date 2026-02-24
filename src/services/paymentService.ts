@@ -1,3 +1,5 @@
+/** Derives payment type and detail (card w/ last4, check w/ number) from raw transaction charge snapshots. */
+
 import { Invoice } from '../types/crm';
 import { fmtDateMDY } from '../utils/date';
 

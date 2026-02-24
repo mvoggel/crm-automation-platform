@@ -1,6 +1,4 @@
-/**
- * Centralized configuration and environment validation
- */
+/** App-level environment config — reads NODE_ENV and PORT from process.env. */
 
 export const config = {
   port: process.env.PORT || 3000,

@@ -1,3 +1,5 @@
+/** LeadConnector / GoHighLevel API client — fetches invoices, appointments, transactions, and contacts. */
+
 import axios, { AxiosInstance } from 'axios';
 import { CRMConnector } from './base';
 import { Invoice, Appointment, Contact, Owner, Transaction } from '../types/crm';

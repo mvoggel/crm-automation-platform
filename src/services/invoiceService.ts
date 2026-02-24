@@ -2,10 +2,7 @@ import { CRMConnector } from '../connectors/base';
 import { Invoice, Owner, InvoiceRow } from '../types/crm';
 import { fmtDateMDY } from '../utils/date';
 
-/**
- * Invoice service - handles fetching, transforming, and enriching invoice data
- * Works with any CRM connector that implements the CRMConnector interface
- */
+/** Fetches invoices from the CRM, enriches them with owner info via contact lookups, and transforms them to row format. */
 export class InvoiceService {
   constructor(private crm: CRMConnector) {}
 

@@ -1,3 +1,5 @@
+/** Global 404 and 500 error response handlers. */
+
 import { Request, Response, NextFunction } from 'express';
 
 /**

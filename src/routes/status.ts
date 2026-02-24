@@ -1,3 +1,5 @@
+/** POST /api/client-status — returns a snapshot of the authenticated client's configuration. */
+
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { hasCRM } from '../connectors/factory';

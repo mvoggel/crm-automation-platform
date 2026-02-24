@@ -150,6 +150,9 @@ clients/*/config.json
 clients/*/.env*
 !clients/_template/
 
+# Apps Script — client-specific, managed separately outside git
+integrations/apps-script/code.gs
+
 # Build output
 dist/
 build/

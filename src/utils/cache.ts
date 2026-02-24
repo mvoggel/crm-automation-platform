@@ -1,8 +1,4 @@
-/**
- * Generic caching utility
- * In Apps Script we used CacheService, here we'll use a simple in-memory cache
- * For production, you'd use Redis or similar
- */
+/** Simple in-memory TTL cache — used to avoid redundant CRM contact API calls within a sync run. */
 
 interface CacheEntry {
   value: any;

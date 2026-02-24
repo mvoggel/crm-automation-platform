@@ -1,3 +1,5 @@
+/** Validates Bearer token and clientId on every /api request, attaching the verified client config to req. */
+
 import { Request, Response, NextFunction } from 'express';
 import { clientConfigLoader } from '../config/clientLoader';
 import { ClientConfig } from '../types/config';

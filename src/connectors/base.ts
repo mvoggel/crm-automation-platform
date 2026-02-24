@@ -1,3 +1,5 @@
+/** Abstract base class defining the interface all CRM connectors must implement. */
+
 import { Invoice, Appointment, Contact, Transaction } from '../types/crm';
 
 /**

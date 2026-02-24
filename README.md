@@ -1,87 +1,91 @@
 # CRM Automation Platform
 
-Multi-tenant automation platform for field service businesses. Connects CRMs to spreadsheets and enables AI-powered reporting.
+Stateless, multi-tenant REST API that pulls operational data (invoices, appointments, payments) from CRMs, transforms it, and delivers it to reporting surfaces like Google Sheets.
 
-## 🚀 Features
+## How it works
 
-- **Multi-CRM Support**: LeadConnector, ServiceTitan, Jobber (more coming)
-- **Spreadsheet Integration**: Google Sheets & Excel
-- **AI-Powered Reports**: ChatGPT integration for conversational data access
-- **Route Optimization**: Coming soon
-- **Multi-Tenant**: Secure isolation, one codebase serves multiple clients
-- **Flexible**: Works with or without a CRM
-
-## 📁 Project Structure
 ```
-crm-automation-platform/
-├── src/                    # Core API (TypeScript)
-│   ├── connectors/        # CRM integrations
-│   ├── services/          # Business logic
-│   ├── routes/            # API endpoints
-│   ├── middleware/        # Auth, logging, errors
-│   ├── types/             # TypeScript definitions
-│   └── utils/             # Helpers (dates, cache)
-├── clients/               # Client configs (gitignored)
-├── integrations/          # Apps Script, Power Automate
-├── packages/              # Route optimizer, etc.
-└── tests/                 # Test suites
+Google Sheets (Apps Script)  →  POST /api/sync-*  →  LeadConnector / HubSpot API
+       ↑                              ↑
+  writes rows              auth + client config
 ```
 
-## 🛠️ Local Development
+The Apps Script is a thin client (~100 lines) — it calls the API and writes rows to sheets. All business logic lives here.
+
+## Project structure
+
+```
+src/
+├── connectors/       # CRM API clients (LeadConnector, HubSpot)
+├── services/         # Business logic (invoices, payment types)
+├── routes/           # API endpoints (one file per endpoint)
+├── middleware/       # Auth, logging, error handling
+├── types/            # Shared TypeScript interfaces
+└── utils/            # Date formatting, in-memory cache
+
+clients/              # Per-client config files (gitignored)
+integrations/
+└── apps-script/      # Google Sheets thin client (code.gs, gitignored)
+```
+
+## API endpoints
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/sync-invoices` | YTD invoices with owner enrichment |
+| `POST /api/sync-appointments` | YTD calendar appointments by team member |
+| `POST /api/sync-payment-types` | Invoice × transaction join for payment method data |
+| `POST /api/client-status` | Config health check |
+| `GET /health` | Public uptime check |
+
+All `/api/*` routes require:
+- `Authorization: Bearer <apiSecret>` header
+- `clientId` in request body
+
+## Local development
+
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
-
-# Run tests
-npm test
-
-# Build for production
-npm run build
+npm run dev        # Start on :3000 with auto-reload
+npm test           # Run test suite
+npm run build      # Compile TypeScript
 ```
 
-## 🔐 Security
+## Adding a client
 
-- API key authentication per client
-- Client data isolation (multi-tenant)
-- No data storage (pass-through only)
-- Credentials in environment variables
+1. Copy `clients/_template/` → `clients/{client-id}/`
+2. Fill in `config.json` with CRM credentials and `apiSecret`
+3. For production (Vercel): set `CLIENT_CONFIG_{CLIENT_ID_UPPER}` env var to the JSON
 
-## 📊 Current Status
+## Deployment (Vercel)
 
-- ✅ Core API complete
-- ✅ LeadConnector integration
-- ✅ Google Sheets integration
-- ✅ Apps Script client
-- ⏳ Vercel deployment
-- ⏳ Excel/Power Automate template
-- ⏳ Route optimizer integration
+Required environment variables:
 
-## 📝 Adding a New Client
+| Variable | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `CLIENT_CONFIG_SOUTH_JERSEY_BLINDS` | Full `config.json` contents as JSON string |
 
-See `clients/_template/README.md`
+Client ID → env var: `south-jersey-blinds` → `CLIENT_CONFIG_SOUTH_JERSEY_BLINDS`
 
-## 🧪 Testing
-```bash
-npm test              # Run all tests
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
-```
+## Current status
 
-## 📖 Documentation
+| Item | Status |
+|---|---|
+| LeadConnector integration | ✅ Production |
+| Google Sheets (Apps Script) | ✅ Production |
+| Invoice + appointment + payment sync | ✅ Complete |
+| Multi-tenant auth | ✅ Complete |
+| Vercel deployment | ✅ Configured |
+| HubSpot connector | 🔶 Stub — contact data only |
 
-- [Technical Architecture](./docs/ARCHITECTURE.md)
-- [API Reference](./docs/API.md)
-- [Client Onboarding](./clients/_template/README.md)
-- [Apps Script Setup](./integrations/apps-script/README.md)
+## Security
 
-## 🤝 Clients
+- Bearer token per client (each client has its own `apiSecret`)
+- Client data fully isolated — one client's token cannot access another's data
+- No data stored — pure pass-through from CRM to caller
+- Client configs and Apps Script are gitignored
 
-Currently serving:
-- South Jersey Blinds (LeadConnector → Google Sheets)
+## License
 
-## 📄 License
-
-Proprietary - All Rights Reserved
+Proprietary — All Rights Reserved

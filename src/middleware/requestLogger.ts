@@ -1,3 +1,5 @@
+/** Logs method, path, status code, duration, and client ID for every request. */
+
 import { Request, Response, NextFunction } from 'express';
 
 /**

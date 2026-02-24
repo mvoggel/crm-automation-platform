@@ -1,3 +1,5 @@
+/** Type definitions for client config and CRM connection settings. */
+
 export type CRMType = 'leadconnector' | 'servicetitan' | 'jobber' | 'spreadsheet' | 'hubspot';
 
 export interface CRMConfig {
