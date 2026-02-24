@@ -35,13 +35,34 @@ export class LeadConnectorCRM extends CRMConnector {
   }
 
   async fetchInvoices(startDate: Date, endDate: Date): Promise<Invoice[]> {
-    const all = await this.paginatedGet<Invoice>('/invoices/', { altType: 'location', altId: this.locationId }, 'invoices');
+    const all = await this.paginatedGet<any>('/invoices/', { altType: 'location', altId: this.locationId }, 'invoices');
     const startMs = startDate.getTime();
     const endMs = endDate.getTime();
-    return all.filter(inv => {
-      const t = inv.issueDate ? new Date(inv.issueDate).getTime() : null;
-      return t !== null && t >= startMs && t < endMs;
-    });
+    return all
+      .filter((raw: any) => {
+        const t = raw.issueDate ? new Date(raw.issueDate).getTime() : null;
+        return t !== null && t >= startMs && t < endMs;
+      })
+      .map((raw: any) => this.normalizeInvoice(raw));
+  }
+
+  private normalizeInvoice(raw: any): Invoice {
+    return {
+      id: raw._id || raw.id || '',
+      invoiceNumber: raw.invoiceNumber || '',
+      invoiceNumberPrefix: raw.invoiceNumberPrefix || 'INV-',
+      status: raw.status || '',
+      amountPaid: Number(raw.amountPaid || 0),
+      amountDue: Number(raw.amountDue || 0),
+      total: Number(raw.total || raw.amount || 0),
+      issueDate: raw.issueDate || null,
+      dueDate: raw.dueDate || null,
+      liveMode: raw.liveMode === true,
+      altType: raw.altType || '',
+      altId: raw.altId || '',
+      companyId: raw.companyId || '',
+      contactDetails: raw.contactDetails,
+    };
   }
 
   async fetchTransactions(startDate: Date, endDate: Date): Promise<Transaction[]> {
