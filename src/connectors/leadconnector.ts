@@ -84,6 +84,10 @@ export class LeadConnectorCRM extends CRMConnector {
       const path = `/calendars/events?locationId=${encodeURIComponent(this.locationId)}&userId=${encodeURIComponent(userId)}&startTime=${encodeURIComponent(String(startMs))}&endTime=${encodeURIComponent(String(endMs))}`;
       const response = await this.client.get(path);
       const events = response.data?.events || response.data?.data || [];
+      if (events.length > 0) {
+        console.log('[DEBUG appt] first event keys:', Object.keys(events[0]));
+        console.log('[DEBUG appt] first event:', JSON.stringify(events[0]).substring(0, 600));
+      }
       all.push(...events.map((evt: any) => this.normalizeAppointment(evt, userId)));
       await this.sleep(150);
     }
