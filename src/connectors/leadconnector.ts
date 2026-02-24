@@ -88,6 +88,19 @@ export class LeadConnectorCRM extends CRMConnector {
       await this.sleep(150);
     }
 
+    // GHL calendar events often omit contactName — backfill via contact lookup when missing.
+    // fetchContact has a 6-hour cache, so repeated contacts don't cause extra API calls.
+    for (const apt of all) {
+      if (!apt.contactName && apt.contactId) {
+        try {
+          const contact = await this.fetchContact(apt.contactId);
+          apt.contactName = contact.name;
+        } catch {
+          // leave contactName empty if lookup fails
+        }
+      }
+    }
+
     return all;
   }
 
