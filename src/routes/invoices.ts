@@ -4,6 +4,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { createCRMConnector, hasCRM } from '../connectors/factory';
 import { InvoiceService } from '../services/invoiceService';
+import { cache } from '../utils/cache';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ function rowsToArrays(rows: any[], headers: string[]): any[][] {
 
 router.post('/sync-invoices', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    cache.clear();
     const { action, year, month, startDate, endDate } = req.body;
     const clientConfig = req.clientConfig!;
 
