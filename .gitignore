@@ -152,6 +152,8 @@ clients/*/.env*
 
 # Apps Script — client-specific, managed separately outside git
 integrations/apps-script/code.gs
+scripts/investigate/lc-investigate.js
+output.json
 
 # Build output
 dist/
