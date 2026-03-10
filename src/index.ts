@@ -9,6 +9,7 @@ import invoiceRoutes from './routes/invoices';
 import appointmentRoutes from './routes/appointments';
 import paymentRoutes from './routes/payments';
 import statusRoutes from './routes/status';
+import salesReportRoutes from './routes/salesReport';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api', invoiceRoutes);
 app.use('/api', appointmentRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', statusRoutes);
+app.use('/api', salesReportRoutes);  // GET /api/sales-report
 
 app.use(notFoundHandler);
 app.use(errorHandler);
