@@ -150,8 +150,9 @@ clients/*/config.json
 clients/*/.env*
 !clients/_template/
 
-# Apps Script — client-specific, managed separately outside git
-integrations/apps-script/code.gs
+# Apps Script — pasted directly into Google Apps Script editor, not pushed to GitHub
+integrations/apps-script/Code.gs
+integrations/apps-script/SJBB_V2_reporting.gs
 scripts/investigate/lc-investigate.js
 output.json
 

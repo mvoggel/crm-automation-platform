@@ -62,6 +62,10 @@ export class LeadConnectorCRM extends CRMConnector {
       altId: raw.altId || '',
       companyId: raw.companyId || '',
       contactDetails: raw.contactDetails,
+      // Owner is sourced directly from the invoice's sentBy/sentFrom fields —
+      // no contact API lookup needed.
+      sentBy: raw.sentBy || '',
+      sentFrom: raw.sentFrom || {},
     };
   }
 

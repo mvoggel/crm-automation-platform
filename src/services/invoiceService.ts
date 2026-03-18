@@ -1,8 +1,12 @@
 import { CRMConnector } from '../connectors/base';
-import { Invoice, Owner, InvoiceRow } from '../types/crm';
+import { Invoice, InvoiceRow } from '../types/crm';
 import { fmtDateMDY } from '../utils/date';
 
-/** Fetches invoices from the CRM, enriches them with owner info via contact lookups, and transforms them to row format. */
+/**
+ * Fetches invoices from the CRM and transforms them to row format.
+ * Owner identity is sourced directly from inv.sentBy / inv.sentFrom.fromName —
+ * no secondary contact API lookups are needed.
+ */
 export class InvoiceService {
   constructor(private crm: CRMConnector) {}
 
@@ -12,7 +16,6 @@ export class InvoiceService {
   async fetchInvoicesForYear(year: number): Promise<Invoice[]> {
     const start = new Date(year, 0, 1, 0, 0, 0);
     const end = new Date(year + 1, 0, 1, 0, 0, 0);
-    
     return await this.crm.fetchInvoices(start, end);
   }
 
@@ -22,106 +25,54 @@ export class InvoiceService {
   async fetchInvoicesForMonth(year: number, month: number): Promise<Invoice[]> {
     const start = new Date(year, month - 1, 1, 0, 0, 0);
     const end = new Date(year, month, 1, 0, 0, 0);
-    
     return await this.crm.fetchInvoices(start, end);
   }
 
   /**
-   * Build owner lookup map for all unique contacts in invoice list
-   * Uses caching from CRM connector to avoid redundant API calls
+   * Transform invoices to standardized row format for output.
+   * Salesperson is resolved from inv.sentBy (user ID) and inv.sentFrom.fromName (display name)
+   * which are already present on every invoice — no extra API calls required.
    */
-  async buildOwnerLookup(invoices: Invoice[]): Promise<Map<string, Owner>> {
-    const ownerMap = new Map<string, Owner>();
-    
-    // Get unique contact IDs
-    const contactIds = new Set<string>();
-    invoices.forEach(inv => {
-      const cid = inv.contactDetails?.id;
-      if (cid) contactIds.add(cid);
-    });
-
-    // Fetch owner info for each contact (with rate limiting)
-    let count = 0;
-    for (const contactId of contactIds) {
-      try {
-        // Rate limiting: pause every 25 requests
-        if (count > 0 && count % 25 === 0) {
-          await this.sleep(250);
-        }
-
-        const contact = await this.crm.fetchContact(contactId);
-        
-        ownerMap.set(contactId, {
-          ownerId: contact.ownerId || '',
-          ownerName: contact.ownerName || '',
-        });
-
-        count++;
-      } catch (error) {
-        console.error(`Failed to fetch contact ${contactId}:`, error);
-        // Set empty owner on error
-        ownerMap.set(contactId, { ownerId: '', ownerName: '' });
-      }
-    }
-
-    return ownerMap;
+  transformToRows(invoices: Invoice[], timezone: string = 'America/New_York'): InvoiceRow[] {
+    return invoices.map(inv => this.invoiceToRow(inv, timezone));
   }
 
   /**
-   * Transform invoices to standardized row format for output
+   * Transform a single invoice to row format
    */
-  transformToRows(
-    invoices: Invoice[],
-    ownerMap: Map<string, Owner>,
-    timezone: string = 'America/New_York'
-  ): InvoiceRow[] {
-    return invoices.map(inv => this.invoiceToRow(inv, ownerMap, timezone));
-  }
-
-  /**
-   * Transform single invoice to row format
-   */
-  private invoiceToRow(
-    inv: Invoice,
-    ownerMap: Map<string, Owner>,
-    timezone: string
-  ): InvoiceRow {
+  private invoiceToRow(inv: Invoice, timezone: string): InvoiceRow {
     const contact = inv.contactDetails || {} as any;
     const addr = contact.address || {};
-    
-    const owner = contact.id && ownerMap.has(contact.id)
-      ? ownerMap.get(contact.id)!
-      : { ownerId: '', ownerName: '' };
 
     return {
-      invoice_id: inv.id || '',
-      invoice_number: inv.invoiceNumber || '',
-      invoice_display: `${inv.invoiceNumberPrefix || 'INV-'}${inv.invoiceNumber || ''}`,
-      invoice_status: inv.status || '',
-      amount_paid: Number(inv.amountPaid || 0),
-      amount_due: Number(inv.amountDue || 0),
-      amount_total: Number(inv.total || 0),
-      issue_date: fmtDateMDY(inv.issueDate, timezone),
-      due_date: fmtDateMDY(inv.dueDate, timezone),
-      live_mode: inv.liveMode ? 'true' : 'false',
-      alt_type: inv.altType || '',
-      alt_id: inv.altId || '',
-      company_id: inv.companyId || '',
-      contact_id: contact.id || '',
-      owner_id: owner.ownerId,
-      owner_name: owner.ownerName,
-      contact_name: contact.name || '',
-      contact_email: contact.email || '',
-      contact_phone: contact.phoneNo || '',
-      contact_addr1: addr.addressLine1 || '',
-      contact_city: addr.city || '',
-      contact_state: addr.state || '',
-      contact_postal: addr.postalCode || '',
+      invoice_id:        inv.id || '',
+      invoice_number:    inv.invoiceNumber || '',
+      invoice_display:   `${inv.invoiceNumberPrefix || 'INV-'}${inv.invoiceNumber || ''}`,
+      invoice_status:    inv.status || '',
+      amount_paid:       Number(inv.amountPaid || 0),
+      amount_due:        Number(inv.amountDue || 0),
+      amount_total:      Number(inv.total || 0),
+      issue_date:        fmtDateMDY(inv.issueDate, timezone),
+      due_date:          fmtDateMDY(inv.dueDate, timezone),
+      live_mode:         inv.liveMode ? 'true' : 'false',
+      alt_type:          inv.altType || '',
+      alt_id:            inv.altId || '',
+      company_id:        inv.companyId || '',
+      contact_id:        contact.id || '',
+      sent_by_user_id:   inv.sentBy || '',
+      sent_from_name:    inv.sentFrom?.fromName || '',
+      contact_name:      contact.name || '',
+      contact_email:     contact.email || '',
+      contact_phone:     contact.phoneNo || '',
+      contact_addr1:     addr.addressLine1 || '',
+      contact_city:      addr.city || '',
+      contact_state:     addr.state || '',
+      contact_postal:    addr.postalCode || '',
     };
   }
 
   /**
-   * Get standard invoice headers
+   * Get standard invoice headers (matches InvoiceRow key order)
    */
   getHeaders(): string[] {
     return [
@@ -139,8 +90,8 @@ export class InvoiceService {
       'alt_id',
       'company_id',
       'contact_id',
-      'owner_id',
-      'owner_name',
+      'sent_by_user_id',
+      'sent_from_name',
       'contact_name',
       'contact_email',
       'contact_phone',
@@ -149,9 +100,5 @@ export class InvoiceService {
       'contact_state',
       'contact_postal',
     ];
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

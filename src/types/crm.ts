@@ -14,6 +14,10 @@ export interface Invoice {
   altId: string;
   companyId: string;
   contactDetails?: Contact;
+  /** The user ID who sent the invoice — used as the salesperson/owner identifier. */
+  sentBy?: string;
+  /** Sender info object from the invoice — fromName is the salesperson display name. */
+  sentFrom?: { fromName?: string };
 }
 
 export interface Contact {
@@ -65,8 +69,8 @@ export interface InvoiceRow {
   alt_id: string;
   company_id: string;
   contact_id: string;
-  owner_id: string;
-  owner_name: string;
+  sent_by_user_id: string;   // replaces owner_id — sourced from inv.sentBy
+  sent_from_name: string;    // replaces owner_name — sourced from inv.sentFrom.fromName
   contact_name: string;
   contact_email: string;
   contact_phone: string;

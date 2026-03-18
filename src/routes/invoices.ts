@@ -59,8 +59,7 @@ router.post('/sync-invoices', async (req: AuthenticatedRequest, res: Response) =
         return res.status(400).json({ ok: false, error: 'invalid_action', message: `Unknown action: ${action}` });
     }
 
-    const ownerMap = await service.buildOwnerLookup(invoices);
-    const rowObjects = service.transformToRows(invoices, ownerMap, clientConfig.timezone);
+    const rowObjects = service.transformToRows(invoices, clientConfig.timezone);
     const headers = service.getHeaders();
 
     res.json({ ok: true, action, clientId: req.clientId, headers, rows: rowsToArrays(rowObjects, headers), count: invoices.length });
